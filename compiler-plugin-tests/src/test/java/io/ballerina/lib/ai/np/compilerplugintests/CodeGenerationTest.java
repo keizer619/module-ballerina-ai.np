@@ -22,6 +22,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import io.ballerina.projects.BuildOptions;
+import io.ballerina.projects.DiagnosticResult;
 import io.ballerina.projects.JBallerinaBackend;
 import io.ballerina.projects.JvmTarget;
 import io.ballerina.projects.Project;
@@ -175,6 +176,33 @@ public class CodeGenerationTest {
     }
 
     @Test
+    public void testCodeFunctionCodeGenWithExistingImport() throws IOException, InterruptedException {
+        String serviceResourceDirectoryName = "code-function-projects" + File.separator +
+                "code-function-codegen-with-existing-import";
+        server.enqueue(new MockResponse()
+                .setBody(getCodeMockResponse(serviceResourceDirectoryName,
+                        "code_function_with_existing_import_code_response.txt"))
+                .setResponseCode(200));
+
+        final Path projectPath = RESOURCE_DIRECTORY.resolve(serviceResourceDirectoryName);
+        final Project naturalExprProject = loadPackageProject(projectPath);
+        naturalExprProject.currentPackage().runCodeGenAndModifyPlugins();
+
+        assertRequest(CODE_PATH, serviceResourceDirectoryName, "code_function_with_existing_import_code_request.json");
+
+        validateGeneratedCodeAndDeleteGeneratedDir(serviceResourceDirectoryName,
+                "analyzeEmployees_np_generated.bal");
+
+        Assert.assertEquals(
+                buildAndRunExecutable(naturalExprProject, getJarPath(projectPath.toString(), naturalExprProject)),
+                """
+                        Analyzing employees in department: Engineering with salary greater than 50000.0
+                        Employee ID: 1, Name: Alice, Salary: 60000.0
+                        Employee ID: 3, Name: Charlie, Salary: 70000.0
+                        """);
+    }
+
+    @Test
     public void testCodeFunctionWithValidation() throws IOException, InterruptedException {
         String serviceResourceDirectoryName = "code-function-projects" + File.separator +
                 "code-function-with-validation-failure";
@@ -213,6 +241,9 @@ public class CodeGenerationTest {
     private static String buildAndRunExecutable(Project project, Path jarPath) throws IOException {
         JBallerinaBackend jBallerinaBackend =
                 JBallerinaBackend.from(project.currentPackage().getCompilation(), JvmTarget.JAVA_21);
+        DiagnosticResult diagnosticResult = jBallerinaBackend.diagnosticResult();
+        Assert.assertFalse(diagnosticResult.hasErrors(),
+                String.format("Expected no compilation errors, found: [%s]", diagnosticResult.errors()));
         jBallerinaBackend.emit(JBallerinaBackend.OutputType.EXEC, jarPath);
 
         ProcessBuilder builder = new ProcessBuilder("java", "-jar", jarPath.toString());
