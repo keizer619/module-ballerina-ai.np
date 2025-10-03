@@ -39,7 +39,7 @@ modules = [
 [[package]]
 org = "ballerina"
 name = "ai.np"
-version = "0.4.3"
+version = "0.5.0"
 modules = [
 	{org = "ballerina", packageName = "ai.np", moduleName = "ai.np"}
 ]
@@ -47,7 +47,7 @@ modules = [
 [[package]]
 org = "ballerina"
 name = "ai.np_test_commons"
-version = "0.4.3"
+version = "0.5.0"
 scope = "testOnly"
 dependencies = [
 	{org = "ballerina", name = "data.jsondata"},
@@ -61,7 +61,7 @@ modules = [
 [[package]]
 org = "ballerina"
 name = "ai.np_tests"
-version = "0.4.3"
+version = "0.5.0"
 dependencies = [
 	{org = "ballerina", name = "ai"},
 	{org = "ballerina", name = "ai.np"},
