@@ -198,8 +198,7 @@ public class CodeGenerationTest {
                 """
                         Analyzing employees in department: Engineering with salary greater than 50000.0
                         Employee ID: 1, Name: Alice, Salary: 60000.0
-                        Employee ID: 3, Name: Charlie, Salary: 70000.0
-                        """);
+                        Employee ID: 3, Name: Charlie, Salary: 70000.0""");
     }
 
     @Test
@@ -251,7 +250,7 @@ public class CodeGenerationTest {
 
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-            return reader.readLine();
+            return String.join("\n", reader.lines().toList());
         }
     }
 
