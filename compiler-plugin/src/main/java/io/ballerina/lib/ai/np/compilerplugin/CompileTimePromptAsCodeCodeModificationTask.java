@@ -36,11 +36,13 @@ import io.ballerina.compiler.syntax.tree.FunctionBodyNode;
 import io.ballerina.compiler.syntax.tree.FunctionCallExpressionNode;
 import io.ballerina.compiler.syntax.tree.FunctionDefinitionNode;
 import io.ballerina.compiler.syntax.tree.ImportDeclarationNode;
+import io.ballerina.compiler.syntax.tree.ImportOrgNameNode;
 import io.ballerina.compiler.syntax.tree.IncludedRecordParameterNode;
 import io.ballerina.compiler.syntax.tree.ModuleMemberDeclarationNode;
 import io.ballerina.compiler.syntax.tree.ModulePartNode;
 import io.ballerina.compiler.syntax.tree.NaturalExpressionNode;
 import io.ballerina.compiler.syntax.tree.NodeFactory;
+import io.ballerina.compiler.syntax.tree.NodeList;
 import io.ballerina.compiler.syntax.tree.NodeParser;
 import io.ballerina.compiler.syntax.tree.ParameterNode;
 import io.ballerina.compiler.syntax.tree.RequiredParameterNode;
@@ -72,6 +74,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static io.ballerina.compiler.syntax.tree.AbstractNodeFactory.createToken;
 import static io.ballerina.lib.ai.np.compilerplugin.CodeGenerationUtils.generateCodeForFunction;
@@ -145,7 +149,8 @@ public class CompileTimePromptAsCodeCodeModificationTask implements ModifierTask
                 newMembers, isSingleBalFileMode, sourceRoot, document);
         ModulePartNode newRoot = (ModulePartNode) modulePartNode.apply(codeGenerator);
         newRoot = newRoot.modify(
-                newRoot.imports().addAll(newImports), newRoot.members().addAll(newMembers), newRoot.eofToken());
+                newRoot.imports().addAll(getNewImports(newRoot.imports(), newImports)),
+                newRoot.members().addAll(newMembers), newRoot.eofToken());
         return document.syntaxTree().modifyWith(newRoot).textDocument();
     }
 
@@ -340,5 +345,39 @@ public class CompileTimePromptAsCodeCodeModificationTask implements ModifierTask
                                              SemanticModel semanticModel) {
         return externalFunctionBody.annotations().stream().
                 anyMatch(annotationNode -> isCodeAnnotation(annotationNode, semanticModel));
+    }
+
+    private static List<ImportDeclarationNode> getNewImports(
+            NodeList<ImportDeclarationNode> currentImports, List<ImportDeclarationNode> importsFromGeneratedCode) {
+        if (importsFromGeneratedCode.isEmpty()) {
+            return importsFromGeneratedCode;
+        }
+
+        Set<String> currentImportsModules =  currentImports.stream()
+                .map(CompileTimePromptAsCodeCodeModificationTask::getModuleFQN)
+                .collect(Collectors.toSet());
+        List<String> importsFromGeneratedCodeModules = importsFromGeneratedCode.stream()
+                .map(CompileTimePromptAsCodeCodeModificationTask::getModuleFQN)
+                .toList();
+
+        List<ImportDeclarationNode> importsToAdd = new ArrayList<>();
+        for (int i = 0; i < importsFromGeneratedCodeModules.size(); i++) {
+            String importFromGeneratedCodeModule = importsFromGeneratedCodeModules.get(i);
+            if (!currentImportsModules.contains(importFromGeneratedCodeModule)) {
+                importsToAdd.add(importsFromGeneratedCode.get(i));
+            }
+        }
+        return importsToAdd;
+    }
+
+    private static String getModuleFQN(ImportDeclarationNode currentImport) {
+        String moduleFQN = "";
+
+        Optional<ImportOrgNameNode> importOrgNameNode = currentImport.orgName();
+        if (importOrgNameNode.isPresent()) {
+            moduleFQN = importOrgNameNode.get().orgName().text() + "/";
+        }
+
+        return moduleFQN + String.join(".", currentImport.moduleName().stream().map(Token::text).toList());
     }
 }
