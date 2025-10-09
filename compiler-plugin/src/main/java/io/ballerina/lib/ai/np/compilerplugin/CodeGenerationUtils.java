@@ -434,6 +434,11 @@ public class CodeGenerationUtils {
                         from the ballerina and ballerinax module in the generated code.
                         Do not use any configurable variables or module-level variables defined in the program.
                         
+                        The generated source code will be added in a separate file. Therefore, even if a module
+                        required is already imported in the file with the original function, you MUST include any
+                        import declarations required by the generated functions as import declarations in the code
+                        snippet.
+                        
                         Respond with ONLY THE GENERATED FUNCTION AND ANY IMPORTS REQUIRED BY THE GENERATED FUNCTION.
                         """,
                 originalFuncName, prompt, generatedFuncName, generatedFuncName, originalFuncName);
